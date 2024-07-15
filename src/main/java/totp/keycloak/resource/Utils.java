@@ -6,8 +6,10 @@ import jakarta.ws.rs.NotAuthorizedException;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserCredentialModel;
 import org.keycloak.models.UserModel;
+import org.keycloak.representations.AccessToken;
 import org.keycloak.services.ErrorResponseException;
 import org.keycloak.services.managers.AppAuthManager;
 import org.keycloak.services.managers.AuthenticationManager;
@@ -56,5 +58,38 @@ public class Utils {
             throw new ErrorResponseException("Error", "Invalid Password",
                     Response.Status.BAD_REQUEST);
         }
+    }
+
+    private static final String REQUIRED_ROLE = "manage-authorization";
+    private static final String REQUIRED_RESOURCE = "realm-management";
+
+    public static UserModel getUserModel(AuthenticationManager.AuthResult authResult, KeycloakSession session, String userId) {
+        // Check if the request comes from client or user
+        boolean isClient = authResult.getToken().getOtherClaims().get("client_id") != null;
+
+
+        // Check if the access token has the right role
+        AccessToken.Access realmManagement = authResult.getToken().getResourceAccess().get(REQUIRED_RESOURCE);
+        if (realmManagement == null || !realmManagement.getRoles().contains(REQUIRED_ROLE)) {
+            throw new WebApplicationException(Response.Status.FORBIDDEN);
+        }
+
+        // Create new point for the user that will OTP generate for him
+        UserModel user = null;
+
+        // Get an instance from current realm
+        RealmModel realm = session.getContext().getRealm();
+
+        // If client call this endpoint, user_id should be sent in body request, if not the user of the token will set.
+        if (isClient) {
+            if (userId == null || userId.isEmpty()) {
+                throw new WebApplicationException("user_id is required",Response.Status.BAD_REQUEST);
+            }
+            user = session.users().getUserById(realm, userId);
+        } else {
+            user = authResult.getUser();
+        }
+
+        return user;
     }
 }
