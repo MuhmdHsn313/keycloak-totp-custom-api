@@ -123,7 +123,6 @@ public class MyResourceProvider implements RealmResourceProvider {
         UserCredentialModel credential = new UserCredentialModel(credentialId, otpCredentialProvider.getType(), totpCode);
         boolean isValid = user.credentialManager().isValid(credential);
 
-
         if (!isValid) {
             throw new WebApplicationException("totp is not valid", Response.Status.BAD_REQUEST);
         }

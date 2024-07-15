@@ -67,13 +67,6 @@ public class Utils {
         // Check if the request comes from client or user
         boolean isClient = authResult.getToken().getOtherClaims().get("client_id") != null;
 
-
-        // Check if the access token has the right role
-        AccessToken.Access realmManagement = authResult.getToken().getResourceAccess().get(REQUIRED_RESOURCE);
-        if (realmManagement == null || !realmManagement.getRoles().contains(REQUIRED_ROLE)) {
-            throw new WebApplicationException(Response.Status.FORBIDDEN);
-        }
-
         // Create new point for the user that will OTP generate for him
         UserModel user = null;
 
@@ -82,6 +75,12 @@ public class Utils {
 
         // If client call this endpoint, user_id should be sent in body request, if not the user of the token will set.
         if (isClient) {
+            // Check if the client access token has the right role
+            AccessToken.Access realmManagement = authResult.getToken().getResourceAccess().get(REQUIRED_RESOURCE);
+            if (realmManagement == null || !realmManagement.getRoles().contains(REQUIRED_ROLE)) {
+                throw new WebApplicationException(Response.Status.FORBIDDEN);
+            }
+
             if (userId == null || userId.isEmpty()) {
                 throw new WebApplicationException("user_id is required",Response.Status.BAD_REQUEST);
             }
